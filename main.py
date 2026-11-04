@@ -6,7 +6,7 @@ app = FastAPI(title="NFC Cloud Redirection API")
 
 # Diccionario que simula la base de datos de enlaces de cada negocio
 NEGOCIOS_DB = {
-    "UTH": "https://www.google.com/maps/place/Universidad+Tecnol%C3%B3gica+de+Honduras+-+UTH/@14.0445169,-87.1818893,816m/data=!3m1!1e3!4m8!3m7!1s0x8f6fbcfd9e49eb59:0x5435e60d9baa7b03!8m2!3d14.0445594!4d-87.1810624!9m1!1b1!16s%2Fg%2F11c5r5s74m?entry=ttu&g_ep=EgoyMDI2MTEwMi4wIKXMDSoASAFQAw%3D%3D",  # Reemplaza por un enlace real de prueba
+    "uth": "https://www.google.com/maps/place/Universidad+Tecnol%C3%B3gica+de+Honduras+-+UTH/@14.0445169,-87.1818893,816m/data=!3m1!1e3!4m8!3m7!1s0x8f6fbcfd9e49eb59:0x5435e60d9baa7b03!8m2!3d14.0445594!4d-87.1810624!9m1!1b1!16s%2Fg%2F11c5r5s74m?entry=ttu&g_ep=EgoyMDI2MTEwMi4wIKXMDSoASAFQAw%3D%3D",  # Reemplaza por un enlace real de prueba
     "demo": "https://google.com"
 }
 
