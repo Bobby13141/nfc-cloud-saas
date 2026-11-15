@@ -1,3 +1,6 @@
+import os
+import json
+import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -7,13 +10,16 @@ from typing import Optional
 
 app = FastAPI(title="NFC Cloud Redirection API")
 
-# URL oficial directa a reseñas de UTH Tegucigalpa mediante Place ID
-NEGOCIOS_DB = {
+# Credenciales de Upstash desde Variables de Entorno de Render
+UPSTASH_URL = os.getenv("UPSTASH_REDIS_REST_URL", "").rstrip("/")
+UPSTASH_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", "")
+HEADERS = {"Authorization": f"Bearer {UPSTASH_TOKEN}"}
+
+DEFAULT_URLS = {
     "uth": "https://search.google.com/local/writereview?placeid=ChIJWetJnv28b48RA3uqmw3mNVQ",
     "demo": "https://google.com"
 }
 
-HISTORIAL_ESCANEOS = []
 ULTIMOS_ACCESOS = {}
 
 class UpdateUrlRequest(BaseModel):
@@ -32,9 +38,23 @@ def detectar_dispositivo(user_agent: str) -> str:
         return "Safari / Mac"
     return "Móvil / Otro"
 
+def upstash_cmd(comando: list):
+    """Ejecuta comandos en Upstash Redis vía API REST"""
+    if not UPSTASH_URL or not UPSTASH_TOKEN:
+        return None
+    try:
+        res = requests.post(UPSTASH_URL, headers=HEADERS, json=comando, timeout=5)
+        return res.json().get("result")
+    except Exception:
+        return None
+
 @app.get("/")
 def home():
-    return {"status": "Servidor en la Nube Activo", "total_registros": len(HISTORIAL_ESCANEOS)}
+    total = upstash_cmd(["LLEN", "historial_escaneos"]) or 0
+    return {
+        "status": "Servidor en la Nube Activo + Persistencia Upstash",
+        "total_registros_permanentes": total
+    }
 
 @app.get("/r/{negocio_id}")
 def redirigir_y_registrar(negocio_id: str, request: Request, origen: Optional[str] = "qr"):
@@ -47,7 +67,7 @@ def redirigir_y_registrar(negocio_id: str, request: Request, origen: Optional[st
     dispositivo = detectar_dispositivo(user_agent)
     tipo_origen = "Tarjeta NFC (NTAG213)" if origen.lower() == "nfc" else "Código QR Impreso"
 
-    # Filtro anti-duplicados (evita contar doble si un teléfono salta de navegador a app en <15s)
+    # Filtro anti-duplicados (15 segundos)
     clave_unica = f"{ip_cliente}_{key}_{tipo_origen}"
     ultimo_tiempo = ULTIMOS_ACCESOS.get(clave_unica)
 
@@ -59,20 +79,25 @@ def redirigir_y_registrar(negocio_id: str, request: Request, origen: Optional[st
             "Origen": tipo_origen,
             "Navegador": dispositivo
         }
-        HISTORIAL_ESCANEOS.insert(0, registro)
+        upstash_cmd(["LPUSH", "historial_escaneos", json.dumps(registro)])
 
-    url_destino = NEGOCIOS_DB.get(key, "https://google.com")
+    url_guardada = upstash_cmd(["HGET", "negocios_urls", key])
+    url_destino = url_guardada if url_guardada else DEFAULT_URLS.get(key, "https://google.com")
     return RedirectResponse(url=url_destino)
 
 @app.get("/api/metricas")
 def obtener_metricas():
+    crudos = upstash_cmd(["LRANGE", "historial_escaneos", 0, -1]) or []
+    escaneos = [json.loads(item) for item in crudos]
+    
+    url_uth = upstash_cmd(["HGET", "negocios_urls", "uth"]) or DEFAULT_URLS["uth"]
     return {
-        "escaneos": HISTORIAL_ESCANEOS,
-        "urls": NEGOCIOS_DB
+        "escaneos": escaneos,
+        "urls": {"uth": url_uth}
     }
 
 @app.post("/api/actualizar-url")
 def actualizar_url(datos: UpdateUrlRequest):
     key = datos.negocio_id.lower()
-    NEGOCIOS_DB[key] = datos.nueva_url
-    return {"mensaje": "URL actualizada correctamente", "nueva_url": datos.nueva_url}
+    upstash_cmd(["HSET", "negocios_urls", key, datos.nueva_url])
+    return {"mensaje": "URL guardada permanentemente en la nube", "nueva_url": datos.nueva_url}
