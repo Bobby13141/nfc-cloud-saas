@@ -16,10 +16,8 @@ try:
     respuesta = requests.get(f"{API_URL}/api/metricas", timeout=15)
     datos = respuesta.json()
     escaneos = datos.get("escaneos", [])
-    url_actual = datos.get("urls", {}).get("uth", "")
 except Exception:
     escaneos = []
-    url_actual = "https://www.google.com/maps/place/Universidad+Tecnol%C3%B3gica+de+Honduras+-+UTH/..."
     st.warning("⏳ El servidor en Render está despertando. Haz clic en 'Actualizar Datos en Tiempo Real' en unos segundos.")
 
 st.divider()
@@ -57,21 +55,3 @@ with c2:
         st.bar_chart(df["Origen"].value_counts())
     else:
         st.info("Esperando el primer escaneo para graficar.")
-
-st.divider()
-
-st.subheader("⚙️ Configuración de Redirección Dinámica")
-st.info("Desde aquí el dueño del negocio puede cambiar la URL sin tener que modificar la tarjeta física o el QR.")
-
-nueva_url = st.text_input("URL actual de destino (Google Reviews UTH):", value=url_actual)
-if st.button("Actualizar URL de Destino"):
-    try:
-        res = requests.post(
-            f"{API_URL}/api/actualizar-url",
-            json={"negocio_id": "uth", "nueva_url": nueva_url},
-            timeout=10
-        )
-        if res.status_code == 200:
-            st.success("✅ ¡URL actualizada en la nube! El QR y NFC ahora redirigen al nuevo enlace.")
-    except Exception:
-        st.error("❌ No se pudo conectar con el servidor. Intenta de nuevo.")
