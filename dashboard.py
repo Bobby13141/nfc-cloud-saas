@@ -2,11 +2,11 @@ import streamlit as st
 import pandas as pd
 import requests
 
-st.set_page_config(page_title="Panel de Métricas | Phygital Cloud", page_icon="📊", layout="wide")
+st.set_page_config(page_title="TapCloud | Analítica & Reputación en la Nube", page_icon="☁️", layout="wide")
 
 API_URL = "https://nfc-cloud-saas.onrender.com"
 
-st.title("📊 Panel de Métricas & Reputación en la Nube")
+st.title("☁️ TapCloud — Panel de Métricas & Reputación")
 st.subheader("Cliente: Universidad Tecnológica de Honduras (UTH)")
 
 if st.button("🔄 Actualizar Datos en Tiempo Real"):
